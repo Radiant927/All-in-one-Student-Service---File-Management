@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,12 +9,27 @@ from app.routers import files as files_router
 from app.routers import transfers as transfers_router
 from app.routers import buses as buses_router
 from app.routers import notification as notification_router
+from app.routers import stats as stats_router
+
+
+scheduler = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理：启动时开定时任务，关闭时停掉"""
+    global scheduler
+    from app.services.scheduler import start_scheduler
+    scheduler = start_scheduler()
+    yield
+    scheduler.shutdown()
 
 
 app = FastAPI(
     title=settings.APP_NAME,
     description="佛山南海校区 ↔ 广州石牌校区 文件转交追踪与确认平台",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS 跨域配置：前后端分离时，前端从不同端口来访问后端，需要允许跨域
@@ -50,3 +67,4 @@ app.include_router(files_router.router)
 app.include_router(transfers_router.router)
 app.include_router(buses_router.router)
 app.include_router(notification_router.router)
+app.include_router(stats_router.router)
