@@ -138,7 +138,38 @@ npm run dev
 访问地址：http://localhost:5173
 
 开发环境下 Vite 会把 `/api` 请求代理到 `http://localhost:8000`，所以后端要先启动。
-打包部署用 `npm run build`，产物在 `frontend/dist`。
+
+### 生产部署
+
+前端请求用的是相对路径 `/api`，开发时靠 Vite 代理转发。打包后产物是纯静态文件，没有代理，因此**必须由 Web 服务器把 `/api` 反向代理到后端**，否则所有接口都会 404。
+
+```bash
+cd frontend
+npm run build     # 产物在 frontend/dist
+```
+
+nginx 配置示例：
+
+```nginx
+server {
+    listen 80;
+    root /path/to/frontend/dist;
+
+    # 前端 history 路由：找不到的路径都回落到 index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 接口与上传文件转发给后端
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+后端用 `uvicorn app.main:app --host 0.0.0.0 --port 8000`（去掉 `--reload`）常驻即可。
 
 ### 微信机器人配置
 
@@ -154,3 +185,9 @@ WECHAT_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx
 |------|--------|----------|
 | 南海校区 | nanhai | admin123 |
 | 石牌校区 | shipai | admin123 |
+
+> ⚠️ 以上是 `init_db.py` 写死的演示账号，**正式使用前务必登录后修改密码**，并在 `backend/.env` 里把 `SECRET_KEY` 换成随机字符串（`python -c "import secrets; print(secrets.token_urlsafe(32))"`）。这两项不改，任何人都能伪造登录凭证。
+
+## 许可证
+
+[MIT](LICENSE)
