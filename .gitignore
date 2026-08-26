@@ -10,6 +10,10 @@ build/
 venv/
 env/
 
+# Node / 前端
+node_modules/
+.vite/
+
 # 环境变量（含密钥，不提交）
 .env
 

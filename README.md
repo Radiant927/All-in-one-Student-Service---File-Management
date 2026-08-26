@@ -98,7 +98,20 @@
 │   ├── campus_file.db       # SQLite 数据库文件（运行后自动生成）
 │   ├── requirements.txt     # Python 依赖清单
 │   └── .env                 # 环境变量（不提交到 git）
-├── frontend/                # Vue 3 前端（后续开发）
+├── frontend/                # Vue 3 前端
+│   ├── src/
+│   │   ├── main.js          # 应用入口
+│   │   ├── App.vue
+│   │   ├── api/             # 接口封装（axios 实例 + 各业务模块）
+│   │   ├── stores/          # Pinia 状态（登录用户）
+│   │   ├── router/          # 路由与登录守卫
+│   │   ├── layouts/         # 主框架布局
+│   │   ├── views/           # 页面
+│   │   ├── utils/           # 枚举字典、时间与文件格式化
+│   │   └── styles/          # 全局样式
+│   ├── index.html
+│   ├── vite.config.js       # 含 /api 到后端 8000 端口的代理
+│   └── package.json
 └── README.md
 ```
 
@@ -113,6 +126,19 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API 文档地址：http://localhost:8000/docs
+
+### 前端启动
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+访问地址：http://localhost:5173
+
+开发环境下 Vite 会把 `/api` 请求代理到 `http://localhost:8000`，所以后端要先启动。
+打包部署用 `npm run build`，产物在 `frontend/dist`。
 
 ### 微信机器人配置
 
