@@ -1,21 +1,14 @@
 from typing import Optional
 from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models import User, Transfer, TransferStatus, FileType, Urgency
-from app.schemas import (
-    TransferCreate, TransferUpdate, TransferResponse,
-    TransferListResponse, ConfirmTransfer, ReportException,
-)
+from app.schemas import TransferCreate, TransferUpdate, TransferResponse, TransferListResponse, ConfirmTransfer, ReportException
 from app.auth import get_current_user
 from app.services import transfer_service
 
-
 router = APIRouter(prefix="/api/transfers", tags=["转交单管理"])
-
 
 @router.post("", response_model=TransferResponse, summary="发起转交单")
 def create_transfer(
@@ -23,23 +16,16 @@ def create_transfer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """发起一个新的转交单"""
-    # 不能发给自己校区
     if form.to_campus == current_user.campus:
         raise HTTPException(status_code=400, detail="不能发给同一校区")
-
     try:
         transfer = transfer_service.create_transfer(
-            db=db,
-            data=form.model_dump(exclude={"file_ids"}),
-            file_ids=form.file_ids,
-            creator=current_user,
+            db=db, data=form.model_dump(exclude={"file_ids"}),
+            file_ids=form.file_ids, creator=current_user,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
     return transfer
-
 
 @router.get("", response_model=TransferListResponse, summary="获取转交单列表")
 def list_transfers(
@@ -55,30 +41,14 @@ def list_transfers(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """分页获取转交单列表，支持筛选和搜索"""
     if role and role not in ("sent", "received"):
         raise HTTPException(status_code=400, detail="role 参数只能是 sent 或 received")
-
     items, total = transfer_service.get_transfer_list(
-        db=db,
-        user=current_user,
-        page=page,
-        page_size=page_size,
-        status=status,
-        file_type=file_type,
-        urgency=urgency,
-        role=role,
-        keyword=keyword,
-        date_from=date_from,
-        date_to=date_to,
+        db=db, user=current_user, page=page, page_size=page_size,
+        status=status, file_type=file_type, urgency=urgency,
+        role=role, keyword=keyword, date_from=date_from, date_to=date_to,
     )
-    return {
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-        "items": items,
-    }
-
+    return {"total": total, "page": page, "page_size": page_size, "items": items}
 
 @router.get("/{transfer_id}", response_model=TransferResponse, summary="获取转交单详情")
 def get_transfer_detail(
@@ -86,12 +56,9 @@ def get_transfer_detail(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """获取转交单详情"""
     transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="转交单不存在")
-
-    # 权限校验：只能看和自己有关的（自己发起的 或 自己校区是接收方 或 管理员）
     is_related = (
         transfer.created_by == current_user.id
         or transfer.to_campus == current_user.campus
@@ -100,9 +67,7 @@ def get_transfer_detail(
     )
     if not is_related:
         raise HTTPException(status_code=403, detail="无权查看此转交单")
-
     return transfer
-
 
 @router.put("/{transfer_id}", response_model=TransferResponse, summary="编辑转交单")
 def update_transfer(
@@ -111,23 +76,17 @@ def update_transfer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """编辑未确认的转交单"""
     transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="转交单不存在")
-
     try:
         transfer = transfer_service.update_transfer(
-            db=db,
-            transfer=transfer,
-            data=form.model_dump(exclude_unset=True),
-            operator=current_user,
+            db=db, transfer=transfer,
+            data=form.model_dump(exclude_unset=True), operator=current_user,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
     return transfer
-
 
 @router.post("/{transfer_id}/cancel", response_model=TransferResponse, summary="撤回转交单")
 def cancel_transfer(
@@ -135,18 +94,14 @@ def cancel_transfer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """撤回自己发起的、待接收状态的转交单"""
     transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="转交单不存在")
-
     try:
         transfer = transfer_service.cancel_transfer(db, transfer, current_user)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
     return transfer
-
 
 @router.post("/{transfer_id}/confirm", response_model=TransferResponse, summary="确认收到")
 def confirm_transfer(
@@ -155,20 +110,16 @@ def confirm_transfer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """接收校区负责人确认收到文件"""
     transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="转交单不存在")
-
     try:
         transfer = transfer_service.confirm_transfer(
-            db, transfer, current_user, form.message
+            db, transfer, current_user, form.message, form.file_ids
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
     return transfer
-
 
 @router.post("/{transfer_id}/exception", response_model=TransferResponse, summary="上报异常")
 def report_exception(
@@ -177,16 +128,11 @@ def report_exception(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """接收校区上报文件异常（如缺失、损坏等）"""
     transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="转交单不存在")
-
     try:
-        transfer = transfer_service.report_exception(
-            db, transfer, current_user, form.note
-        )
+        transfer = transfer_service.report_exception(db, transfer, current_user, form.note)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
     return transfer

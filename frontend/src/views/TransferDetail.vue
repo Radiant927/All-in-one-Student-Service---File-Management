@@ -35,20 +35,10 @@
           <div class="card-header">
             <span>基本信息</span>
             <div class="actions">
-              <el-button
-                v-if="canConfirm"
-                type="success"
-                :icon="Select"
-                @click="confirmDialog = true"
-              >
+              <el-button v-if="canConfirm" type="success" :icon="Select" @click="confirmDialog = true">
                 确认收到
               </el-button>
-              <el-button
-                v-if="canConfirm"
-                type="warning"
-                :icon="WarningFilled"
-                @click="exceptionDialog = true"
-              >
+              <el-button v-if="canConfirm" type="warning" :icon="WarningFilled" @click="exceptionDialog = true">
                 上报异常
               </el-button>
               <el-button v-if="canModify" :icon="Edit" @click="goEdit">编辑</el-button>
@@ -64,39 +54,21 @@
           <el-descriptions-item label="转交方向">
             {{ campusLabel(transfer.from_campus) }} → {{ campusLabel(transfer.to_campus) }}
           </el-descriptions-item>
-          <el-descriptions-item label="文件类型">
-            {{ fileTypeLabel(transfer.file_type) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="紧急程度">
-            {{ urgencyLabel(transfer.urgency) }}
-          </el-descriptions-item>
+          <el-descriptions-item label="文件类型">{{ fileTypeLabel(transfer.file_type) }}</el-descriptions-item>
+          <el-descriptions-item label="紧急程度">{{ urgencyLabel(transfer.urgency) }}</el-descriptions-item>
           <el-descriptions-item label="转交同学">
             {{ transfer.courier_name }}
-            <span v-if="transfer.courier_phone" class="text-muted">
-              （{{ transfer.courier_phone }}）
-            </span>
+            <span v-if="transfer.courier_phone" class="text-muted">（{{ transfer.courier_phone }}）</span>
           </el-descriptions-item>
           <el-descriptions-item label="接收人">
             {{ transfer.receiver_name }}
-            <span v-if="transfer.receiver_phone" class="text-muted">
-              （{{ transfer.receiver_phone }}）
-            </span>
+            <span v-if="transfer.receiver_phone" class="text-muted">（{{ transfer.receiver_phone }}）</span>
           </el-descriptions-item>
-          <el-descriptions-item label="发车时间">
-            {{ formatDateTime(transfer.depart_time) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="预计到达">
-            {{ formatDateTime(transfer.estimate_arrive_time) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="发起时间">
-            {{ formatDateTime(transfer.created_at) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="确认时间">
-            {{ formatDateTime(transfer.confirm_time) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="文件说明" :span="descColumn">
-            {{ transfer.description || '—' }}
-          </el-descriptions-item>
+          <el-descriptions-item label="发车时间">{{ formatDateTime(transfer.depart_time) }}</el-descriptions-item>
+          <el-descriptions-item label="预计到达">{{ formatDateTime(transfer.estimate_arrive_time) }}</el-descriptions-item>
+          <el-descriptions-item label="发起时间">{{ formatDateTime(transfer.created_at) }}</el-descriptions-item>
+          <el-descriptions-item label="确认时间">{{ formatDateTime(transfer.confirm_time) }}</el-descriptions-item>
+          <el-descriptions-item label="文件说明" :span="descColumn">{{ transfer.description || '—' }}</el-descriptions-item>
           <el-descriptions-item v-if="transfer.confirm_message" label="收件留言" :span="descColumn">
             {{ transfer.confirm_message }}
           </el-descriptions-item>
@@ -116,38 +88,54 @@
           </el-table-column>
           <el-table-column label="操作" width="100" fixed="right">
             <template #default="{ row }">
-              <el-button text type="primary" :icon="Download" @click="onDownload(row)">
-                下载
-              </el-button>
+              <el-button text type="primary" :icon="Download" @click="onDownload(row)">下载</el-button>
             </template>
           </el-table-column>
         </el-table>
       </el-card>
 
-      <el-card>
+      <el-card class="card-gap">
         <template #header>流转进度</template>
         <el-steps :active="activeStep" align-center finish-status="success">
           <el-step title="已发起" :description="formatDateTime(transfer.created_at)" />
           <el-step title="校车发出" :description="formatDateTime(transfer.depart_time)" />
           <el-step title="预计到达" :description="formatDateTime(transfer.estimate_arrive_time)" />
-          <el-step
-            :title="stepFinalTitle"
-            :status="stepFinalStatus"
-            :description="formatDateTime(transfer.confirm_time)"
-          />
+          <el-step :title="stepFinalTitle" :status="stepFinalStatus" :description="formatDateTime(transfer.confirm_time)" />
         </el-steps>
+      </el-card>
+
+      <el-card>
+        <template #header>操作记录</template>
+        <el-empty v-if="!logs.length" description="暂无记录" :image-size="70" />
+        <el-timeline v-else>
+          <el-timeline-item
+            v-for="log in logs"
+            :key="log.id"
+            :timestamp="formatDateTime(log.created_at)"
+            type="primary"
+          >
+            {{ log.detail }}
+          </el-timeline-item>
+        </el-timeline>
       </el-card>
     </template>
 
-    <el-dialog v-model="confirmDialog" title="确认收到文件" width="420px">
+    <el-dialog v-model="confirmDialog" title="确认收到文件" width="520px">
       <el-form label-position="top">
         <el-form-item label="回执留言（选填）">
-          <el-input
-            v-model="confirmMessage"
-            type="textarea"
-            :rows="3"
-            placeholder="如：文件齐全，已交至教务处"
-          />
+          <el-input v-model="confirmMessage" type="textarea" :rows="3" placeholder="如：文件齐全，已交至教务处" />
+        </el-form-item>
+        <el-form-item label="签收凭证照片（选填）">
+          <el-upload
+            v-model:file-list="confirmFileList"
+            :http-request="doUpload"
+            :before-upload="beforeUpload"
+            :on-remove="onRemove"
+            multiple
+            list-type="picture-card"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -159,12 +147,7 @@
     <el-dialog v-model="exceptionDialog" title="上报异常" width="420px">
       <el-form label-position="top">
         <el-form-item label="异常说明" required>
-          <el-input
-            v-model="exceptionNote"
-            type="textarea"
-            :rows="3"
-            placeholder="如：缺少第 3 份材料 / 文件被雨水浸湿"
-          />
+          <el-input v-model="exceptionNote" type="textarea" :rows="3" placeholder="如：缺少第 3 份材料 / 文件被雨水浸湿" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -179,22 +162,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Back, Download, Edit, RefreshLeft, Select, WarningFilled } from '@element-plus/icons-vue'
-
+import { Back, Download, Edit, RefreshLeft, Select, WarningFilled, Plus } from '@element-plus/icons-vue'
 import * as transfersApi from '@/api/transfers'
 import * as filesApi from '@/api/files'
+import * as logsApi from '@/api/logs'
 import { useUserStore } from '@/stores/user'
-import {
-  campusLabel,
-  fileTypeLabel,
-  formatDateTime,
-  formatFileSize,
-  parseServerTime,
-  statusLabel,
-  statusType,
-  urgencyLabel,
-  urgencyType,
-} from '@/utils/dict'
+import { campusLabel, fileTypeLabel, formatDateTime, formatFileSize, parseServerTime, statusLabel, statusType, urgencyLabel, urgencyType } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
@@ -203,27 +176,25 @@ const userStore = useUserStore()
 const loading = ref(false)
 const acting = ref(false)
 const transfer = ref(null)
+const logs = ref([])
 const confirmDialog = ref(false)
 const exceptionDialog = ref(false)
 const confirmMessage = ref('')
+const confirmFileList = ref([])
 const exceptionNote = ref('')
 
 const descColumn = computed(() => (window.innerWidth < 768 ? 1 : 2))
 
-/** 只有接收校区的人能确认或上报异常，且单子还没结束 */
-const canConfirm = computed(
-  () =>
-    transfer.value &&
-    userStore.campus === transfer.value.to_campus &&
-    ['pending', 'overdue'].includes(transfer.value.status),
+const canConfirm = computed(() =>
+  transfer.value &&
+  userStore.campus === transfer.value.to_campus &&
+  ['pending', 'overdue'].includes(transfer.value.status),
 )
 
-/** 编辑和撤回都要求是自己发起的、还处于待接收状态 */
-const canModify = computed(
-  () =>
-    transfer.value &&
-    transfer.value.created_by === userStore.user?.id &&
-    transfer.value.status === 'pending',
+const canModify = computed(() =>
+  transfer.value &&
+  transfer.value.created_by === userStore.user?.id &&
+  transfer.value.status === 'pending',
 )
 
 const activeStep = computed(() => {
@@ -238,17 +209,17 @@ const activeStep = computed(() => {
 })
 
 const stepFinalTitle = computed(() => {
-  const status = transfer.value?.status
-  if (status === 'confirmed') return '已确认签收'
-  if (status === 'exception') return '异常'
-  if (status === 'cancelled') return '已撤回'
+  const s = transfer.value?.status
+  if (s === 'confirmed') return '已确认签收'
+  if (s === 'exception') return '异常'
+  if (s === 'cancelled') return '已撤回'
   return '待确认签收'
 })
 
 const stepFinalStatus = computed(() => {
-  const status = transfer.value?.status
-  if (status === 'confirmed') return 'success'
-  if (status === 'exception' || status === 'overdue') return 'error'
+  const s = transfer.value?.status
+  if (s === 'confirmed') return 'success'
+  if (s === 'exception' || s === 'overdue') return 'error'
   return undefined
 })
 
@@ -256,6 +227,8 @@ async function load() {
   loading.value = true
   try {
     transfer.value = await transfersApi.getTransfer(route.params.id)
+    const logData = await logsApi.listLogs({ target_type: 'transfer', target_id: transfer.value.id })
+    logs.value = logData.items
   } finally {
     loading.value = false
   }
@@ -265,15 +238,37 @@ function goEdit() {
   router.push({ name: 'transfer-edit', params: { id: transfer.value.id } })
 }
 
+function beforeUpload(file) {
+  if (file.size > 50 * 1024 * 1024) {
+    ElMessage.error(`「${file.name}」超过 50MB，无法上传`)
+    return false
+  }
+  return true
+}
+
+async function doUpload(options) {
+  const uploaded = await filesApi.uploadFile(options.file)
+  return uploaded
+}
+
+function onRemove(file) {
+  const id = file.response?.id ?? file.id
+  if (id) filesApi.deleteFile(id).catch(() => {})
+}
+
 async function onConfirm() {
   acting.value = true
   try {
+    const fileIds = confirmFileList.value.map(f => f.response?.id ?? f.id).filter(Boolean)
     transfer.value = await transfersApi.confirmTransfer(transfer.value.id, {
       message: confirmMessage.value,
+      file_ids: fileIds,
     })
     confirmDialog.value = false
     confirmMessage.value = ''
+    confirmFileList.value = []
     ElMessage.success('已确认收到，对方校区将收到通知')
+    load()
   } finally {
     acting.value = false
   }
@@ -292,6 +287,7 @@ async function onException() {
     exceptionDialog.value = false
     exceptionNote.value = ''
     ElMessage.success('异常已上报')
+    load()
   } finally {
     acting.value = false
   }
@@ -304,9 +300,9 @@ async function onCancel() {
     { type: 'warning' },
   ).catch(() => false)
   if (!confirmed) return
-
   transfer.value = await transfersApi.cancelTransfer(transfer.value.id)
   ElMessage.success('转交单已撤回')
+  load()
 }
 
 function onDownload(file) {
@@ -317,24 +313,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-.title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.title-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
 </style>

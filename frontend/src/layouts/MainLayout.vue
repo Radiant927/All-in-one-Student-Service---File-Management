@@ -22,6 +22,10 @@
           <el-icon><Clock /></el-icon>
           <template #title>校车班次</template>
         </el-menu-item>
+        <el-menu-item v-if="userStore.isAdmin" index="/users">
+          <el-icon><UserFilled /></el-icon>
+          <template #title>用户管理</template>
+        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
           <template #title>个人中心</template>
@@ -64,7 +68,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { Expand, Fold } from '@element-plus/icons-vue'
-
 import { useUserStore } from '@/stores/user'
 import { campusLabel } from '@/utils/dict'
 
@@ -73,11 +76,9 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const collapsed = ref(window.innerWidth < 768)
-
 const activeMenu = computed(() => route.meta.activeMenu || route.path)
 
 onMounted(() => {
-  // 刷新页面时用缓存的 token 拉一次用户信息，顺带校验 token 是否还有效
   userStore.fetchMe().catch(() => {})
 })
 
@@ -90,80 +91,20 @@ async function onCommand(command) {
     type: 'warning',
   }).catch(() => false)
   if (!confirmed) return
-
   userStore.logout()
   router.push({ name: 'login' })
 }
 </script>
 
 <style scoped>
-.layout {
-  height: 100%;
-}
-
-.layout-aside {
-  background: #001529;
-  transition: width 0.2s;
-  overflow: hidden;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 56px;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.layout-menu {
-  border-right: none;
-  background: transparent;
-  --el-menu-bg-color: transparent;
-  --el-menu-text-color: rgba(255, 255, 255, 0.75);
-  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
-  --el-menu-active-color: #fff;
-}
-
-.layout-menu :deep(.is-active) {
-  background: var(--el-color-primary);
-}
-
-.layout-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  padding: 0 16px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.header-left,
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.user-trigger {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  outline: none;
-}
-
-.layout-main {
-  padding: 0;
-  overflow-y: auto;
-}
+.layout { height: 100%; }
+.layout-aside { background: #001529; transition: width 0.2s; overflow: hidden; }
+.logo { display: flex; align-items: center; justify-content: center; gap: 8px; height: 56px; color: #fff; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.layout-menu { border-right: none; background: transparent; --el-menu-bg-color: transparent; --el-menu-text-color: rgba(255, 255, 255, 0.75); --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08); --el-menu-active-color: #fff; }
+.layout-menu :deep(.is-active) { background: var(--el-color-primary); }
+.layout-header { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e4e7ed; }
+.header-left, .header-right { display: flex; align-items: center; gap: 12px; }
+.header-title { font-size: 16px; font-weight: 600; }
+.user-trigger { display: flex; align-items: center; gap: 4px; cursor: pointer; outline: none; }
+.layout-main { padding: 0; overflow-y: auto; }
 </style>
