@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
 import { useUserStore } from '@/stores/user'
 
 const routes = [
@@ -49,6 +48,12 @@ const routes = [
         name: 'buses',
         component: () => import('@/views/BusSchedule.vue'),
         meta: { title: '校车班次' },
+      },
+      {
+        path: 'users',
+        name: 'users',
+        component: () => import('@/views/UserManagement.vue'),
+        meta: { title: '用户管理' },
       },
       {
         path: 'profile',

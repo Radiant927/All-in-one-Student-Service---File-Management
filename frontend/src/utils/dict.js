@@ -25,7 +25,6 @@ export const URGENCY = {
   critical: { label: '特急', type: 'danger' },
 }
 
-/** 把字典对象转成 el-select 需要的 [{value, label}] */
 export function toOptions(dict) {
   return Object.entries(dict).map(([value, item]) => ({
     value,
@@ -40,19 +39,15 @@ export const fileTypeLabel = (v) => FILE_TYPE[v] || v || ''
 export const urgencyLabel = (v) => URGENCY[v]?.label || v || ''
 export const urgencyType = (v) => URGENCY[v]?.type || 'info'
 
-/**
- * 后端所有时间字段都是不带时区后缀的 UTC 时间（datetime.utcnow），
- * 直接交给 new Date() 会被当成本地时间从而差 8 小时，所以这里手动补 Z。
- */
+/** 后端已统一使用本地时间，直接解析即可 */
 export function parseServerTime(value) {
   if (!value) return null
   if (value instanceof Date) return value
-  const hasZone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value)
-  const date = new Date(hasZone ? value : `${value}Z`)
+  const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-/** 提交给后端的时间统一转成 UTC ISO 字符串，和后端存储口径保持一致 */
+/** 提交给后端的时间直接转 ISO 字符串 */
 export function toServerTime(value) {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)
@@ -87,7 +82,6 @@ export function formatFileSize(bytes) {
   return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
-/** 只有两个校区，接收方就是当前用户所在校区之外的那个 */
 export function oppositeCampus(campus) {
   return campus === 'nanhai' ? 'shipai' : 'nanhai'
 }
